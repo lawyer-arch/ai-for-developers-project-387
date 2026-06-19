@@ -9,6 +9,16 @@ using OpenAPI;
 namespace SchedulingApi;
 
 // ──────────────────────────────────────────────
+// Security
+// ──────────────────────────────────────────────
+
+@useAuth(BearerAuth)
+namespace Protected;
+
+@TypeSpec.Http.bearer
+model BearerAuth {}
+
+// ──────────────────────────────────────────────
 // Models
 // ──────────────────────────────────────────────
 
@@ -18,6 +28,24 @@ model User {
   email: string;
   name?: string;
   timeZone: string;
+}
+
+model AuthResponse {
+  accessToken: string;
+  tokenType: string;
+}
+
+model LoginRequest {
+  username: string;
+  password: string;
+}
+
+model RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+  name?: string;
+  timeZone?: string;
 }
 
 model EventType {
@@ -128,6 +156,27 @@ model CreateAttendee {
   email: string;
   timeZone: string;
   phoneNumber?: string;
+}
+
+// ──────────────────────────────────────────────
+// Auth Routes
+// ──────────────────────────────────────────────
+
+@route("/api/v1/auth")
+namespace Auth {
+  @doc("Регистрация нового пользователя")
+  @post
+  op register(@body body: RegisterRequest): AuthResponse;
+
+  @doc("Получение JWT токена")
+  @route("/login")
+  @post
+  op login(@body body: LoginRequest): AuthResponse;
+
+  @doc("Текущий пользователь")
+  @route("/me")
+  @get
+  op me(): User;
 }
 
 // ──────────────────────────────────────────────

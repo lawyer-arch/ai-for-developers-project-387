@@ -3,16 +3,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.auth import get_current_user
 from app.db import get_db
 from app.models.schedule import Schedule
-from app.schemas.schedule import AvailabilityCreate, AvailabilityResponse, ScheduleCreate, ScheduleResponse
+from app.models.user import User
+from app.schemas.schedule import (
+    AvailabilityCreate,
+    AvailabilityResponse,
+    ScheduleCreate,
+    ScheduleResponse,
+)
 
 router = APIRouter(prefix="/api/v1/schedules", tags=["Schedules"])
 
 
 @router.post("", response_model=ScheduleResponse, status_code=201)
-async def create_schedule(body: ScheduleCreate, db: AsyncSession = Depends(get_db)) -> Schedule:
-    schedule = Schedule(**body.model_dump(), owner_id=1)  # TODO: get from auth
+async def create_schedule(
+    body: ScheduleCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Schedule:
+    schedule = Schedule(**body.model_dump(), owner_id=current_user.id)
     db.add(schedule)
     await db.commit()
     await db.refresh(schedule, ["availability"])
@@ -20,10 +31,15 @@ async def create_schedule(body: ScheduleCreate, db: AsyncSession = Depends(get_d
 
 
 @router.get("", response_model=list[ScheduleResponse])
-async def list_schedules(db: AsyncSession = Depends(get_db)) -> list[Schedule]:
+async def list_schedules(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[Schedule]:
     result = await db.execute(
-        select(Schedule).where(Schedule.owner_id == 1).options(selectinload(Schedule.availability))
-    )  # TODO: auth
+        select(Schedule)
+        .where(Schedule.owner_id == current_user.id)
+        .options(selectinload(Schedule.availability))
+    )
     return list(result.scalars().all())
 
 

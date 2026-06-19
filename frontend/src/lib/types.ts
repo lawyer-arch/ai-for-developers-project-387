@@ -114,3 +114,21 @@ export interface CreateAttendee {
   timeZone: string;
   phoneNumber?: string;
 }
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+  name?: string;
+  timeZone?: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}

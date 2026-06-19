@@ -6,13 +6,13 @@ import logging
 from datetime import time
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import hash_password
 from app.db import Base, async_session, engine
-from app.models.user import User
-from app.models.schedule import Schedule
 from app.models.availability import Availability
 from app.models.event_type import EventType
+from app.models.schedule import Schedule
+from app.models.user import User
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 SEED_USER = {
     "username": "demo",
     "email": "demo@example.com",
+    "hashed_password": hash_password("password123"),
     "name": "Demo User",
     "time_zone": "Europe/Moscow",
 }
@@ -67,7 +68,9 @@ async def seed() -> None:
 
         # 2. Schedule
         result = await session.execute(
-            select(Schedule).where(Schedule.owner_id == user.id, Schedule.name == SEED_SCHEDULE["name"])
+            select(Schedule).where(
+                Schedule.owner_id == user.id, Schedule.name == SEED_SCHEDULE["name"]
+            )
         )
         schedule = result.scalar_one_or_none()
         if schedule is None:
@@ -96,16 +99,25 @@ async def seed() -> None:
 
         # 4. EventType
         result = await session.execute(
-            select(EventType).where(EventType.owner_id == user.id, EventType.slug == SEED_EVENT_TYPE["slug"])
+            select(EventType).where(
+                EventType.owner_id == user.id, EventType.slug == SEED_EVENT_TYPE["slug"]
+            )
         )
         event_type = result.scalar_one_or_none()
         if event_type is None:
             event_type = EventType(owner_id=user.id, schedule_id=schedule.id, **SEED_EVENT_TYPE)
             session.add(event_type)
             await session.flush()
-            log.info("Created event type: %s/%s (id=%d)", user.username, event_type.slug, event_type.id)
+            log.info(
+                "Created event type: %s/%s (id=%d)", user.username, event_type.slug, event_type.id
+            )
         else:
-            log.info("Event type already exists: %s/%s (id=%d)", user.username, event_type.slug, event_type.id)
+            log.info(
+                "Event type already exists: %s/%s (id=%d)",
+                user.username,
+                event_type.slug,
+                event_type.id,
+            )
 
         await session.commit()
     log.info("Seed completed.")

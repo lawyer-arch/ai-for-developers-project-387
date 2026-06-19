@@ -8,10 +8,12 @@ class Availability(Base):
     __tablename__ = "availability"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    schedule_id: Mapped[int] = mapped_column(Integer, ForeignKey("schedules.id", ondelete="CASCADE"), index=True)
+    schedule_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("schedules.id", ondelete="CASCADE"), index=True
+    )
     days: Mapped[str] = mapped_column(String(20))  # JSON array stored as string: "[0,1,2,3,4]"
     start_time: Mapped[str] = mapped_column(Time)  # "HH:MM:SS"
-    end_time: Mapped[str] = mapped_column(Time)    # "HH:MM:SS"
+    end_time: Mapped[str] = mapped_column(Time)  # "HH:MM:SS"
     specific_date: Mapped[str | None] = mapped_column(Date, default=None)
 
     schedule = relationship("Schedule", back_populates="availability")

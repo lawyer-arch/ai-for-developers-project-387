@@ -1,3 +1,4 @@
+import { getAuthHeaders, logout } from "./auth";
 import {
   EventType,
   CreateEventType,
@@ -12,18 +13,37 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
+const PUBLIC_PATHS = ["/slots", "/bookings"];
+
+function isPublic(path: string): boolean {
+  return PUBLIC_PATHS.some((p) => path.includes(p));
+}
+
 async function fetchApi<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (!isPublic(path)) {
+    Object.assign(headers, getAuthHeaders());
+  }
+
   const response = await fetch(url, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...headers,
       ...options?.headers,
     },
   });
+
+  if (response.status === 401 && typeof window !== "undefined") {
+    logout();
+    throw new Error("Session expired");
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));

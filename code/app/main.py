@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 
-from app.api import bookings, event_types, schedules, slots
+from app.api import auth, bookings, event_types, schedules, slots
 from app.db import Base, engine
 
 app = FastAPI(title="Scheduling Service API", version="1.0.0")
 
+app.include_router(auth.router)
 app.include_router(event_types.router)
 app.include_router(schedules.router)
 app.include_router(slots.router)

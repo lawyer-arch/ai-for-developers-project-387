@@ -1,6 +1,6 @@
 import json
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -79,7 +79,12 @@ async def create_booking(
         "end_time": booking.end_time,
         "status": booking.status,
         "attendees": [
-            {"name": a.name, "email": a.email, "time_zone": a.time_zone, "phone_number": a.phone_number}
+            {
+                "name": a.name,
+                "email": a.email,
+                "time_zone": a.time_zone,
+                "phone_number": a.phone_number,
+            }
             for a in booking.attendees
         ],
         "responses": json.loads(booking.responses) if booking.responses else {},

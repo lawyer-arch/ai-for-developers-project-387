@@ -8,12 +8,12 @@ from app.db import Base
 
 class EventType(Base):
     __tablename__ = "event_types"
-    __table_args__ = (
-        UniqueConstraint("owner_id", "slug", name="uq_event_type_owner_slug"),
-    )
+    __table_args__ = (UniqueConstraint("owner_id", "slug", name="uq_event_type_owner_slug"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    owner_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    owner_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     title: Mapped[str] = mapped_column(String(255))
     slug: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(String(2048), default=None)
@@ -24,7 +24,9 @@ class EventType(Base):
     after_event_buffer: Mapped[int] = mapped_column(Integer, default=0)
     requires_confirmation: Mapped[bool] = mapped_column(Boolean, default=False)
     location: Mapped[str | None] = mapped_column(String(512), default=None)
-    schedule_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("schedules.id", ondelete="SET NULL"), default=None, index=True)
+    schedule_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("schedules.id", ondelete="SET NULL"), default=None, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     owner = relationship("User", back_populates="event_types")
