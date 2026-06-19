@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -20,7 +21,14 @@ async def create_event_type(
 ) -> EventType:
     event_type = EventType(**body.model_dump(), owner_id=current_user.id)
     db.add(event_type)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="An event type with this slug already exists",
+        )
     result = await db.execute(
         select(EventType).options(joinedload(EventType.owner)).where(EventType.id == event_type.id)
     )

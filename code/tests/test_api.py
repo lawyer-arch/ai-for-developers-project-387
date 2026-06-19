@@ -30,6 +30,24 @@ async def test_create_event_type(client: AsyncClient, auth_token: str) -> None:
 
 
 @pytest.mark.asyncio
+async def test_create_event_type_duplicate_slug(
+    client: AsyncClient, auth_token: str
+) -> None:
+    payload = {
+        "title": "Consultation",
+        "slug": "consult",
+        "length": 30,
+    }
+    headers = {"Authorization": f"Bearer {auth_token}"}
+    response = await client.post("/api/v1/event-types", json=payload, headers=headers)
+    assert response.status_code == 201
+
+    response = await client.post("/api/v1/event-types", json=payload, headers=headers)
+    assert response.status_code == 409
+    assert "slug" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
 async def test_list_event_types(client: AsyncClient, auth_token: str) -> None:
     response = await client.get(
         "/api/v1/event-types",
