@@ -81,10 +81,12 @@ async def get_available_slots(
     for b in bookings:
         bs = b.start_time.replace(tzinfo=host_tz) if b.start_time.tzinfo is None else b.start_time
         be = b.end_time.replace(tzinfo=host_tz) if b.end_time.tzinfo is None else b.end_time
-        booked_ranges.append((
-            bs - timedelta(minutes=event_type.before_event_buffer),
-            be + timedelta(minutes=event_type.after_event_buffer),
-        ))
+        booked_ranges.append(
+            (
+                bs - timedelta(minutes=event_type.before_event_buffer),
+                be + timedelta(minutes=event_type.after_event_buffer),
+            )
+        )
 
     # 5. Filter out occupied slots
     available = []

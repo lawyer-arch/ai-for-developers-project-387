@@ -5,12 +5,11 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-
 from app.config import settings
 from app.db import Base
 
 # Import all models to register them with Base.metadata
-from app.models import User, EventType, Schedule, Availability, Booking, Attendee  # noqa: F401
+from app.models import Attendee, Availability, Booking, EventType, Schedule, User  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

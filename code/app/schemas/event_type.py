@@ -36,10 +36,6 @@ class EventTypeResponse(EventTypeBase):
             return values
         owner = getattr(values, "owner", None)
         username = getattr(owner, "username", "") if owner else ""
-        attrs = {
-            k: v
-            for k, v in vars(values).items()
-            if not k.startswith("_")
-        }
+        attrs = {k: v for k, v in vars(values).items() if not k.startswith("_")}
         attrs["owner_username"] = username
         return attrs

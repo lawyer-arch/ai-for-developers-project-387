@@ -8,7 +8,9 @@ class Attendee(Base):
     __tablename__ = "attendees"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    booking_id: Mapped[int] = mapped_column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), index=True)
+    booking_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("bookings.id", ondelete="CASCADE"), index=True
+    )
     name: Mapped[str] = mapped_column(String(255))
     email: Mapped[str] = mapped_column(String(254), index=True)
     time_zone: Mapped[str] = mapped_column(String(64), default="Europe/London")
