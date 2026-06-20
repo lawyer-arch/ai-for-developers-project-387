@@ -2,27 +2,42 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listEventTypes } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { listEventTypes, deleteEventType } from "@/lib/api";
 import { EventType } from "@/lib/types";
 
 export default function Home() {
+  const router = useRouter();
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const data = await listEventTypes();
-        setEventTypes(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load");
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
   }, []);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listEventTypes();
+      setEventTypes(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete(id: number, title: string) {
+    if (!confirm(`Delete event type "${title}"? This cannot be undone.`)) return;
+    try {
+      await deleteEventType(id);
+      setEventTypes(eventTypes.filter((et) => et.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -80,13 +95,27 @@ export default function Home() {
                   </p>
                 )}
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between">
                 <Link
                   href={`/${et.owner_username}/${et.slug}`}
                   className="text-blue-600 hover:text-blue-800 text-sm"
                 >
                   View booking page
                 </Link>
+                <div className="space-x-2">
+                  <button
+                    onClick={() => router.push(`/event-types/${et.id}/edit`)}
+                    className="text-indigo-600 hover:text-indigo-800 text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(et.id, et.title)}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}

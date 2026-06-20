@@ -38,6 +38,20 @@ export interface CreateEventType {
   scheduleId?: number;
 }
 
+export interface UpdateEventType {
+  title?: string;
+  slug?: string;
+  description?: string;
+  length?: number;
+  slotInterval?: number;
+  minimumBookingNotice?: number;
+  beforeEventBuffer?: number;
+  afterEventBuffer?: number;
+  requiresConfirmation?: boolean;
+  location?: string;
+  scheduleId?: number;
+}
+
 export interface Schedule {
   id: number;
   name: string;
@@ -57,6 +71,18 @@ export interface Availability {
 export interface CreateSchedule {
   name: string;
   timeZone?: string;
+}
+
+export interface UpdateSchedule {
+  name?: string;
+  timeZone?: string;
+}
+
+export interface UpdateAvailability {
+  days?: string;
+  startTime?: string;
+  endTime?: string;
+  specificDate?: string;
 }
 
 export interface CreateAvailability {

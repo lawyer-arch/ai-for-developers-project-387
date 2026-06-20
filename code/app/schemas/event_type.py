@@ -21,6 +21,20 @@ class EventTypeCreate(EventTypeBase):
     pass
 
 
+class EventTypeUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    slug: str | None = Field(default=None, min_length=1, max_length=255, pattern=r"^[a-z0-9-]+$")
+    description: str | None = Field(default=None, max_length=2048)
+    length: int | None = Field(default=None, ge=1)
+    slot_interval: int | None = Field(default=None, ge=1)
+    minimum_booking_notice: int | None = Field(default=None, ge=0)
+    before_event_buffer: int | None = Field(default=None, ge=0)
+    after_event_buffer: int | None = Field(default=None, ge=0)
+    requires_confirmation: bool | None = None
+    location: str | None = Field(default=None, max_length=512)
+    schedule_id: int | None = None
+
+
 class EventTypeResponse(EventTypeBase):
     id: int
     owner_id: int

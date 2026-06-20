@@ -34,6 +34,11 @@ class ScheduleCreate(ScheduleBase):
     pass
 
 
+class ScheduleUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    time_zone: str | None = None
+
+
 class ScheduleResponse(ScheduleBase):
     id: int
     owner_id: int
@@ -44,6 +49,13 @@ class ScheduleResponse(ScheduleBase):
 
 class AvailabilityCreate(BaseModel):
     days: str  # JSON array stored as string: "[0,1,2,3,4]"
-    start_time: str  # "HH:MM"
-    end_time: str  # "HH:MM"
+    start_time: time  # "HH:MM" — auto-parsed by Pydantic
+    end_time: time  # "HH:MM"
+    specific_date: str | None = None
+
+
+class AvailabilityUpdate(BaseModel):
+    days: str | None = None  # JSON array stored as string: "[0,1,2,3,4]"
+    start_time: time | None = None  # "HH:MM"
+    end_time: time | None = None  # "HH:MM"
     specific_date: str | None = None

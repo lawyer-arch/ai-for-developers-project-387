@@ -2,10 +2,13 @@ import { getAuthHeaders, logout } from "./auth";
 import {
   EventType,
   CreateEventType,
+  UpdateEventType,
   Schedule,
   CreateSchedule,
+  UpdateSchedule,
   Availability,
   CreateAvailability,
+  UpdateAvailability,
   SlotsResponse,
   Booking,
   CreateBooking,
@@ -71,15 +74,51 @@ export async function createEventType(
   });
 }
 
+export async function updateEventType(
+  id: number,
+  data: UpdateEventType
+): Promise<EventType> {
+  return fetchApi<EventType>(`/api/v1/event-types/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteEventType(id: number): Promise<void> {
+  return fetchApi<void>(`/api/v1/event-types/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // Schedules
 export async function listSchedules(): Promise<Schedule[]> {
   return fetchApi<Schedule[]>("/api/v1/schedules");
+}
+
+export async function getSchedule(id: number): Promise<Schedule> {
+  return fetchApi<Schedule>(`/api/v1/schedules/${id}`);
 }
 
 export async function createSchedule(data: CreateSchedule): Promise<Schedule> {
   return fetchApi<Schedule>("/api/v1/schedules", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+export async function updateSchedule(
+  id: number,
+  data: UpdateSchedule
+): Promise<Schedule> {
+  return fetchApi<Schedule>(`/api/v1/schedules/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSchedule(id: number): Promise<void> {
+  return fetchApi<void>(`/api/v1/schedules/${id}`, {
+    method: "DELETE",
   });
 }
 
@@ -92,6 +131,32 @@ export async function addAvailability(
     {
       method: "POST",
       body: JSON.stringify(data),
+    }
+  );
+}
+
+export async function updateAvailability(
+  scheduleId: number,
+  availabilityId: number,
+  data: UpdateAvailability
+): Promise<Availability> {
+  return fetchApi<Availability>(
+    `/api/v1/schedules/${scheduleId}/availability/${availabilityId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+export async function deleteAvailability(
+  scheduleId: number,
+  availabilityId: number
+): Promise<void> {
+  return fetchApi<void>(
+    `/api/v1/schedules/${scheduleId}/availability/${availabilityId}`,
+    {
+      method: "DELETE",
     }
   );
 }
