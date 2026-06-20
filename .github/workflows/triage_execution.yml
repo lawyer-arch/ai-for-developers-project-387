@@ -1,0 +1,58 @@
+name: Issue Execution
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  execute_fix:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Check for execution command
+        id: check_command
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commentBody = context.payload.comment.body;
+            // Ищем команду /fix (без учета регистра)
+            const isFixCommand = /\bfix\b/i.test(commentBody);
+            return isFixCommand;
+          result-encoding: string
+
+      - name: Check account age
+        id: check
+        if: steps.check_command.outputs.result == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const user = await github.rest.users.getByUsername({
+              username: context.payload.comment.user.login
+            });
+            const created = new Date(user.data.created_at);
+            const days = (Date.now() - created) / (1000 * 60 * 60 * 24);
+            return days >= 30;
+          result-encoding: string
+
+      - uses: actions/checkout@v6
+        if: steps.check_command.outputs.result == 'true' && steps.check.outputs.result == 'true'
+        with:
+          persist-credentials: false
+
+      - uses: anomalyco/opencode/github@latest
+        if: steps.check_command.outputs.result == 'true' && steps.check.outputs.result == 'true'
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        with:
+          model: opencode/deepseek-v4-flash-free
+          prompt: |
+            You have received the command to fix the issue. Proceed with the implementation.
+
+            - Analyze the issue and provide a clear solution.
+            - Create a pull request with the necessary code changes to fix the issue.
+            - Link the pull request in your comment.
