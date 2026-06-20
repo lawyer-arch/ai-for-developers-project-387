@@ -132,15 +132,41 @@ model CreateEventType {
   scheduleId?: int32;
 }
 
+model UpdateEventType {
+  title?: string;
+  slug?: string;
+  description?: string;
+  length?: int32;
+  slotInterval?: int32;
+  minimumBookingNotice?: int32;
+  beforeEventBuffer?: int32;
+  afterEventBuffer?: int32;
+  requiresConfirmation?: boolean;
+  location?: string;
+  scheduleId?: int32;
+}
+
 model CreateSchedule {
   name: string;
   timeZone: string = "Europe/Moscow";
+}
+
+model UpdateSchedule {
+  name?: string;
+  timeZone?: string;
 }
 
 model CreateAvailability {
   days: int32[];
   startTime: string;
   endTime: string;
+  specificDate?: string;
+}
+
+model UpdateAvailability {
+  days?: int32[];
+  startTime?: string;
+  endTime?: string;
   specificDate?: string;
 }
 
@@ -196,11 +222,22 @@ namespace EventTypes {
 }
 
 @route("/api/v1/event-types/{eventTypeId}")
-@doc("Получение типа встречи по ID")
+@doc("Получение, обновление и удаление типа встречи")
 namespace EventTypeById {
   @doc("Получить тип встречи")
   @get
   op getEventType(@path eventTypeId: int32): EventType;
+
+  @doc("Обновить тип встречи")
+  @patch
+  op updateEventType(
+    @path eventTypeId: int32,
+    @body body: UpdateEventType,
+  ): EventType;
+
+  @doc("Удалить тип встречи")
+  @delete
+  op deleteEventType(@path eventTypeId: int32): void;
 }
 
 @route("/api/v1/schedules")
@@ -215,6 +252,25 @@ namespace Schedules {
   op listSchedules(): Schedule[];
 }
 
+@route("/api/v1/schedules/{scheduleId}")
+@doc("Получение, обновление и удаление расписания")
+namespace ScheduleById {
+  @doc("Получить расписание")
+  @get
+  op getSchedule(@path scheduleId: int32): Schedule;
+
+  @doc("Обновить расписание")
+  @patch
+  op updateSchedule(
+    @path scheduleId: int32,
+    @body body: UpdateSchedule,
+  ): Schedule;
+
+  @doc("Удалить расписание")
+  @delete
+  op deleteSchedule(@path scheduleId: int32): void;
+}
+
 @route("/api/v1/schedules/{scheduleId}/availability")
 @doc("Добавление окон доступности")
 namespace ScheduleAvailability {
@@ -224,6 +280,25 @@ namespace ScheduleAvailability {
     @path scheduleId: int32,
     @body body: CreateAvailability,
   ): Availability;
+}
+
+@route("/api/v1/schedules/{scheduleId}/availability/{availabilityId}")
+@doc("Обновление и удаление окна доступности")
+namespace AvailabilityById {
+  @doc("Обновить окно доступности")
+  @patch
+  op updateAvailability(
+    @path scheduleId: int32,
+    @path availabilityId: int32,
+    @body body: UpdateAvailability,
+  ): Availability;
+
+  @doc("Удалить окно доступности")
+  @delete
+  op deleteAvailability(
+    @path scheduleId: int32,
+    @path availabilityId: int32,
+  ): void;
 }
 
 @route("/api/v1/{username}/{slug}/slots")

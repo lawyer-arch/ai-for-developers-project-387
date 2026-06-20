@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listSchedules, createSchedule, addAvailability } from "@/lib/api";
+import {
+  listSchedules,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
+  addAvailability,
+  deleteAvailability,
+} from "@/lib/api";
 import { Schedule, CreateAvailability } from "@/lib/types";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -15,6 +22,9 @@ export default function SchedulesPage() {
   const [newScheduleTimezone, setNewScheduleTimezone] = useState(
     "Europe/Moscow"
   );
+  const [editingSchedule, setEditingSchedule] = useState<number | null>(null);
+  const [editScheduleName, setEditScheduleName] = useState("");
+  const [editScheduleTimezone, setEditScheduleTimezone] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState<number | null>(null);
   const [availabilityForm, setAvailabilityForm] = useState<CreateAvailability>({
     days: "[0,1,2,3,4]",
@@ -84,6 +94,47 @@ export default function SchedulesPage() {
     const newSelected = [...selectedDays];
     newSelected[index] = !newSelected[index];
     setSelectedDays(newSelected);
+  }
+
+  function startEditing(schedule: Schedule) {
+    setEditingSchedule(schedule.id);
+    setEditScheduleName(schedule.name);
+    setEditScheduleTimezone(schedule.timeZone);
+  }
+
+  async function handleUpdateSchedule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingSchedule) return;
+    try {
+      await updateSchedule(editingSchedule, {
+        name: editScheduleName,
+        timeZone: editScheduleTimezone,
+      });
+      setEditingSchedule(null);
+      await loadSchedules();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    }
+  }
+
+  async function handleDeleteSchedule(id: number, name: string) {
+    if (!confirm(`Delete schedule "${name}"? This cannot be undone.`)) return;
+    try {
+      await deleteSchedule(id);
+      await loadSchedules();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+    }
+  }
+
+  async function handleDeleteAvailability(scheduleId: number, availabilityId: number) {
+    if (!confirm("Delete this availability window?")) return;
+    try {
+      await deleteAvailability(scheduleId, availabilityId);
+      await loadSchedules();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete availability");
+    }
   }
 
   return (
@@ -172,23 +223,74 @@ export default function SchedulesPage() {
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {schedule.name}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    Timezone: {schedule.timeZone}
-                  </p>
+                  {editingSchedule === schedule.id ? (
+                    <form onSubmit={handleUpdateSchedule} className="space-y-2">
+                      <input
+                        type="text"
+                        required
+                        value={editScheduleName}
+                        onChange={(e) => setEditScheduleName(e.target.value)}
+                        className="block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Schedule name"
+                      />
+                      <input
+                        type="text"
+                        value={editScheduleTimezone}
+                        onChange={(e) => setEditScheduleTimezone(e.target.value)}
+                        className="block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Timezone"
+                      />
+                      <div className="flex space-x-2">
+                        <button
+                          type="submit"
+                          className="text-green-600 hover:text-green-800 text-sm font-medium"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingSchedule(null)}
+                          className="text-gray-600 hover:text-gray-800 text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {schedule.name}
+                      </h2>
+                      <p className="text-sm text-gray-500">
+                        Timezone: {schedule.timeZone}
+                      </p>
+                    </>
+                  )}
                 </div>
-                <button
-                  onClick={() =>
-                    setSelectedSchedule(
-                      selectedSchedule === schedule.id ? null : schedule.id
-                    )
-                  }
-                  className="text-blue-600 hover:text-blue-800 text-sm"
-                >
-                  {selectedSchedule === schedule.id ? "Cancel" : "Add Availability"}
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => startEditing(schedule)}
+                    className="text-indigo-600 hover:text-indigo-800 text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSchedule(schedule.id, schedule.name)}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() =>
+                      setSelectedSchedule(
+                        selectedSchedule === schedule.id ? null : schedule.id
+                      )
+                    }
+                    className="text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    {selectedSchedule === schedule.id ? "Cancel" : "Add Availability"}
+                  </button>
+                </div>
               </div>
 
               {schedule.availability.length > 0 ? (
@@ -196,17 +298,25 @@ export default function SchedulesPage() {
                   {schedule.availability.map((avail) => (
                     <div
                       key={avail.id}
-                      className="bg-gray-50 rounded-md p-3 text-sm"
+                      className="bg-gray-50 rounded-md p-3 text-sm flex justify-between items-center"
                     >
-                      <span className="font-medium">
-                        {JSON.parse(avail.days)
-                          .map((d: number) => DAYS[d])
-                          .join(", ")}
-                      </span>
-                      <span className="text-gray-500 mx-2">|</span>
-                      <span>
-                        {avail.startTime} - {avail.endTime}
-                      </span>
+                      <div>
+                        <span className="font-medium">
+                          {JSON.parse(avail.days)
+                            .map((d: number) => DAYS[d])
+                            .join(", ")}
+                        </span>
+                        <span className="text-gray-500 mx-2">|</span>
+                        <span>
+                          {avail.startTime} - {avail.endTime}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteAvailability(schedule.id, avail.id)}
+                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                      >
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>

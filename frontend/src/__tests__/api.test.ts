@@ -3,9 +3,15 @@ import {
   listEventTypes,
   getEventType,
   createEventType,
+  updateEventType,
+  deleteEventType,
   listSchedules,
   createSchedule,
+  updateSchedule,
+  deleteSchedule,
   addAvailability,
+  updateAvailability,
+  deleteAvailability,
   getAvailableSlots,
   createBooking,
 } from "@/lib/api";
@@ -187,6 +193,147 @@ describe("API Client", () => {
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify(bookingData),
+        })
+      );
+    });
+  });
+
+  describe("updateEventType", () => {
+    it("sends PATCH request with partial data", async () => {
+      const updateData = { title: "Updated", length: 45 };
+      const mockResponse = {
+        id: 1,
+        title: "Updated",
+        slug: "consult",
+        length: 45,
+        slotInterval: 15,
+        minimumBookingNotice: 120,
+        beforeEventBuffer: 0,
+        afterEventBuffer: 0,
+        requiresConfirmation: false,
+        owner_id: 1,
+        owner_username: "demo",
+        createdAt: "2026-01-01T00:00:00Z",
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await updateEventType(1, updateData);
+      expect(result).toEqual(mockResponse);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/event-types/1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify(updateData),
+        })
+      );
+    });
+  });
+
+  describe("deleteEventType", () => {
+    it("sends DELETE request", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => undefined,
+      });
+
+      await deleteEventType(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/event-types/1",
+        expect.objectContaining({
+          method: "DELETE",
+        })
+      );
+    });
+  });
+
+  describe("updateSchedule", () => {
+    it("sends PATCH request for schedule", async () => {
+      const updateData = { name: "New Name" };
+      const mockResponse = {
+        id: 1,
+        name: "New Name",
+        timeZone: "Europe/Moscow",
+        availability: [],
+        owner_id: 1,
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await updateSchedule(1, updateData);
+      expect(result).toEqual(mockResponse);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/schedules/1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify(updateData),
+        })
+      );
+    });
+  });
+
+  describe("deleteSchedule", () => {
+    it("sends DELETE request for schedule", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => undefined,
+      });
+
+      await deleteSchedule(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/schedules/1",
+        expect.objectContaining({
+          method: "DELETE",
+        })
+      );
+    });
+  });
+
+  describe("updateAvailability", () => {
+    it("sends PATCH request with partial data", async () => {
+      const updateData = { startTime: "10:00" };
+      const mockResponse = {
+        id: 1,
+        days: "[0,1,2,3,4]",
+        startTime: "10:00",
+        endTime: "17:00",
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await updateAvailability(1, 1, updateData);
+      expect(result).toEqual(mockResponse);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/schedules/1/availability/1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify(updateData),
+        })
+      );
+    });
+  });
+
+  describe("deleteAvailability", () => {
+    it("sends DELETE request for availability", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => undefined,
+      });
+
+      await deleteAvailability(1, 1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/schedules/1/availability/1",
+        expect.objectContaining({
+          method: "DELETE",
         })
       );
     });
