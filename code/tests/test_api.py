@@ -1,3 +1,7 @@
+from datetime import date, datetime, timedelta, time
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
+
 import pytest
 from httpx import AsyncClient
 
@@ -320,3 +324,142 @@ async def test_update_availability(client: AsyncClient, auth_token: str) -> None
     assert response.status_code == 200
     assert response.json()["start_time"] == "10:00"
     assert response.json()["end_time"] == "18:00"
+
+
+def _next_weekday(weekday: int) -> date:
+    today = date.today()
+    days_ahead = weekday - today.weekday()
+    if days_ahead <= 0:
+        days_ahead += 7
+    return today + timedelta(days=days_ahead)
+
+
+NEXT_MONDAY = _next_weekday(0)
+FIXED_NOW = datetime.combine(NEXT_MONDAY, time(8, 0), tzinfo=ZoneInfo("Europe/London"))
+
+
+class _MockSlotsDatetime:
+    @classmethod
+    def now(cls, tz=None):
+        if tz is not None:
+            return FIXED_NOW.astimezone(tz)
+        return FIXED_NOW.replace(tzinfo=None)
+
+    @classmethod
+    def combine(cls, *args, **kwargs):  # noqa: N805
+        return datetime.combine(*args, **kwargs)
+
+    @classmethod
+    def timedelta(cls, *args, **kwargs):  # noqa: N805
+        return __import__("datetime").timedelta(*args, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_slots_minimum_booking_notice(client: AsyncClient, auth_token: str) -> None:
+    headers = {"Authorization": f"Bearer {auth_token}"}
+
+    with patch("app.api.slots.datetime", _MockSlotsDatetime):
+        sched_resp = await client.post(
+            "/api/v1/schedules",
+            json={"name": "Work", "time_zone": "Europe/London"},
+            headers=headers,
+        )
+        schedule_id = sched_resp.json()["id"]
+
+        await client.post(
+            f"/api/v1/schedules/{schedule_id}/availability",
+            json={"days": "[0]", "start_time": "09:00", "end_time": "17:00"},
+        )
+
+        et_resp = await client.post(
+            "/api/v1/event-types",
+            json={
+                "title": "Consult",
+                "slug": "consult",
+                "length": 30,
+                "slot_interval": 30,
+                "minimum_booking_notice": 120,
+                "schedule_id": schedule_id,
+            },
+            headers=headers,
+        )
+        assert et_resp.status_code == 201
+
+        response = await client.get(
+            f"/api/v1/demo/consult/slots?date={NEXT_MONDAY.isoformat()}&timezone=Europe/London"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        slot_times = [datetime.fromisoformat(s["time"]).astimezone(ZoneInfo("Europe/London")) for s in data["slots"]]
+
+        # now=08:00, min_bookable = 08:00 + 120min = 10:00
+        # Slots 09:00, 09:30 excluded → 14 slots (10:00-16:30, interval 30min)
+        assert len(data["slots"]) == 14
+
+        for st in slot_times:
+            assert st.hour >= 10
+
+
+@pytest.mark.asyncio
+async def test_slots_buffers_exclude_overlapping_slots(
+    client: AsyncClient, auth_token: str
+) -> None:
+    headers = {"Authorization": f"Bearer {auth_token}"}
+
+    with patch("app.api.slots.datetime", _MockSlotsDatetime):
+        sched_resp = await client.post(
+            "/api/v1/schedules",
+            json={"name": "Work", "time_zone": "Europe/London"},
+            headers=headers,
+        )
+        schedule_id = sched_resp.json()["id"]
+
+        await client.post(
+            f"/api/v1/schedules/{schedule_id}/availability",
+            json={"days": "[0]", "start_time": "09:00", "end_time": "17:00"},
+        )
+
+        et_resp = await client.post(
+            "/api/v1/event-types",
+            json={
+                "title": "BufferTest",
+                "slug": "buffer-test",
+                "length": 30,
+                "slot_interval": 30,
+                "minimum_booking_notice": 0,
+                "before_event_buffer": 30,
+                "after_event_buffer": 30,
+                "schedule_id": schedule_id,
+            },
+            headers=headers,
+        )
+        assert et_resp.status_code == 201
+
+        booking_start = datetime.combine(NEXT_MONDAY, time(11, 0), tzinfo=ZoneInfo("Europe/London"))
+        await client.post(
+            "/api/v1/demo/buffer-test/bookings",
+            json={
+                "start": booking_start.isoformat(),
+                "attendee": {
+                    "name": "John",
+                    "email": "john@example.com",
+                    "time_zone": "Europe/London",
+                },
+            },
+        )
+
+        response = await client.get(
+            f"/api/v1/demo/buffer-test/slots?date={NEXT_MONDAY.isoformat()}&timezone=Europe/London"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        slot_times = [datetime.fromisoformat(s["time"]).astimezone(ZoneInfo("Europe/London")) for s in data["slots"]]
+
+        # Booking 11:00-11:30, before_buffer=30, after_buffer=30
+        # Blocked range: 10:30-12:00 → slots 10:30, 11:00, 11:30 excluded
+        # 16 total − 3 = 13
+        assert len(data["slots"]) == 13
+
+        excluded = {(10, 30), (11, 0), (11, 30)}
+        for st in slot_times:
+            assert (st.hour, st.minute) not in excluded
