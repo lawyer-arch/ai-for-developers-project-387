@@ -42,3 +42,18 @@ jobs:
             - Provide documentation links
             - Add error handling guidance for code examples
             Otherwise, do not comment.
+            1.  ### Title Analysis:
+            -   Check the issue title for clarity and conciseness.
+            -   Does it clearly state the problem or the desired feature?
+            -   If the title is vague (e.g., "Help", "Bug", "Error"), suggest a more specific alternative.
+
+            2.  ### Body Analysis:
+            -   Check the body of the issue for a clear description of the problem.
+            -   Verify that all required information is present (e.g., steps to reproduce, expected vs actual behavior, environment details).
+            -   If any information is missing, politely ask the user to provide it.
+
+            3.  ### Code Snippet Syntax Check:
+            -   If the issue contains code snippets, review them for basic syntax errors and typos.
+            -   If you find an obvious syntax error, point it out and suggest a correction.
+
+            Your response should be constructive and helpful. If you find no issues with the title, body, or code snippets, do not comment.
