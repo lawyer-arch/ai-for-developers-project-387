@@ -1,0 +1,126 @@
+name: Lighthouse Audit
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build and start services
+        run: docker compose up --build -d
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for backend..."
+          until curl -s http://localhost:8080/health > /dev/null 2>&1; do
+            sleep 2
+          done
+          echo "Backend is ready"
+          echo "Waiting for frontend..."
+          until curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q 200; do
+            sleep 2
+          done
+          echo "Frontend is ready"
+
+      - name: Install Lighthouse
+        run: npm install -g lighthouse
+
+      - name: Run Lighthouse audit
+        run: |
+          mkdir -p reports
+
+          for page in homepage booking-page schedules-page; do
+            case $page in
+              homepage) url="http://localhost:3000" ;;
+              booking-page) url="http://localhost:3000/demo/consult" ;;
+              schedules-page) url="http://localhost:3000/schedules" ;;
+            esac
+
+            lighthouse "$url" \
+              --output=json --output=html \
+              --output-path="reports/$page" \
+              --chrome-flags="--headless --no-sandbox --disable-gpu"
+          done
+
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: reports/
+          retention-days: 7
+
+      - name: Create issue with audit results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
+          TITLE="Lighthouse Audit Report $(date -u '+%Y-%m-%d')"
+          ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          {
+            echo "## Lighthouse Audit Results"
+            echo ""
+            echo "Report generated at **$DATE**"
+            echo ""
+            echo "| Page | Performance | Accessibility | Best Practices | SEO |"
+            echo "|------|------------|---------------|----------------|-----|"
+
+            for report in reports/*.json; do
+              page=$(basename "$report" .json)
+              perf=$(jq -r '.categories.performance.score * 100 | floor' "$report")
+              a11y=$(jq -r '.categories.accessibility.score * 100 | floor' "$report")
+              bp=$(jq -r '.categories["best-practices"].score * 100 | floor' "$report")
+              seo=$(jq -r '.categories.seo.score * 100 | floor' "$report")
+              echo "| $page | $perf | $a11y | $bp | $seo |"
+            done
+
+            echo ""
+            echo "---"
+            echo ""
+
+            for report in reports/*.json; do
+              page=$(basename "$report" .json)
+
+              echo "### $page"
+              echo ""
+
+              echo "**Top opportunities** (performance impact):"
+              echo ""
+
+              jq -r '.audits | to_entries |
+                map(select(.value.scoreDisplayMode == "opportunity")) |
+                sort_by(.value.details.overallSavingsMs // 0) | reverse | .[:5][] |
+                "- **\(.value.title)**: potential savings \((.value.details.overallSavingsMs // 0) | round)ms"' "$report"
+
+              echo ""
+              echo "**Items to fix** (score < 0.9):"
+              echo ""
+
+              jq -r '.audits | to_entries |
+                map(select(.value.score != null and .value.score < 0.9)) |
+                sort_by(.value.score)[] |
+                "- \(.value.title) — score \(.value.score | . * 100 | floor)"' "$report"
+
+              echo ""
+            done
+
+            echo "---"
+            echo "Full reports: [$ARTIFACT_URL]($ARTIFACT_URL)"
+            echo "Artifact: \`lighthouse-reports\`"
+          } > issue_body.md
+
+          gh issue create \
+            --title "$TITLE" \
+            --label "lighthouse" \
+            --label "automated" \
+            --body-file issue_body.md \
+            --repo "${{ github.repository }}"

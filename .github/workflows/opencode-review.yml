@@ -23,7 +23,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
-          model: openai/gpt-5.4
+          model: opencode/deepseek-v4-flash-free
           prompt: |
             Review this pull request:
             - Find bugs and risky changes
