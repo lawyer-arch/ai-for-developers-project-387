@@ -120,7 +120,5 @@ jobs:
 
           gh issue create \
             --title "$TITLE" \
-            --label "lighthouse" \
-            --label "automated" \
             --body-file issue_body.md \
             --repo "${{ github.repository }}"
