@@ -15,7 +15,13 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - name: Debug token permissions
+        run: |
+            echo "Checking token permissions..."
+            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/pulls
+
       - uses: googleapis/release-please-action@v4
         with:
-          token: ${{ github.token }}
+          token: ${{secrets.GITHUB_TOKEN }}
           release-type: simple
